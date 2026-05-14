@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FCT Utilization Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f4f4f0;
+    --surface: rgba(255,255,255,0.72);
+    --surface2: rgba(255,255,255,0.55);
+    --border: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.25);
+    --text: #0a0a0a;
+    --text-muted: rgba(10,10,10,0.5);
+    --accent: #0a0a0a;
+    --accent2: #1a1a1a;
+    --danger: #c0392b;
+    --success: #1a7a4a;
+    --warn: #b7730a;
+    --tag-op: #0a0a0a;
+    --tag-fn: #2c2c2c;
+    --tag-un: #4a4a4a;
+    --radius: 10px;
+    --shadow: 0 2px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 48px rgba(0,0,0,0.14);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(180,180,160,0.35) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(150,150,140,0.25) 0%, transparent 70%),
+      radial-gradient(ellipse 100% 100% at 50% 50%, rgba(230,230,220,0.4) 0%, transparent 100%);
+    pointer-events:none;z-index:0;
+  }
+  body::after{
+    content:'';position:fixed;inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity:0.6;pointer-events:none;z-index:0;
+  }
+  .app{position:relative;z-index:1;min-height:100vh;}
+
+  /* ---- GLASS PANEL ---- */
+  .glass{
+    background:var(--surface);
+    backdrop-filter:blur(18px) saturate(1.4);
+    -webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .glass-dark{
+    background:var(--accent);
+    color:#fff;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+
+  /* ---- LOGIN ---- */
+  #login-screen{
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px;
+  }
+  .login-card{
+    width:100%;max-width:420px;
+    padding:48px 40px 40px;
+  }
+  .login-logo{
+    display:flex;align-items:center;gap:12px;margin-bottom:36px;
+  }
+  .login-logo-mark{
+    width:44px;height:44px;background:var(--accent);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .login-logo-mark svg{stroke:#fff;fill:none;}
+  .login-title{font-family:'Space Mono',monospace;font-size:1.3rem;font-weight:700;letter-spacing:-0.5px;}
+  .login-sub{font-size:0.78rem;color:var(--text-muted);margin-top:2px;}
+  .login-card h2{font-size:1.5rem;font-weight:700;margin-bottom:8px;}
+  .login-card p{color:var(--text-muted);font-size:0.9rem;margin-bottom:28px;}
+  .form-group{margin-bottom:16px;}
+  .form-group label{display:block;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;color:var(--text-muted);}
+  .form-control{
+    width:100%;padding:11px 14px;
+    background:rgba(255,255,255,0.8);
+    border:1px solid var(--border-strong);
+    border-radius:6px;font-family:'DM Sans',sans-serif;
+    font-size:0.95rem;color:var(--text);
+    transition:border-color 0.2s,box-shadow 0.2s;outline:none;
+  }
+  .form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,10,10,0.1);}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:11px 20px;border-radius:6px;font-family:'DM Sans',sans-serif;
+    font-size:0.9rem;font-weight:600;cursor:pointer;border:none;
+    transition:all 0.18s;text-decoration:none;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#2a2a2a;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.2);}
+  .btn-outline{background:transparent;color:var(--accent);border:1.5px solid var(--border-strong);}
+  .btn-outline:hover{background:var(--accent);color:#fff;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{background:#a93226;}
+  .btn-success{background:var(--success);color:#fff;}
+  .btn-success:hover{background:#145a38;}
+  .btn-sm{padding:7px 13px;font-size:0.82rem;}
+  .btn-full{width:100%;}
+  .login-error{
+    background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);
+    color:var(--danger);padding:10px 14px;border-radius:6px;
+    font-size:0.86rem;margin-bottom:16px;display:none;
+  }
+
+  /* ---- MAIN LAYOUT ---- */
+  #app-screen{display:none;flex-direction:column;min-height:100vh;}
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;height:62px;
+    background:rgba(244,244,240,0.88);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-left{display:flex;align-items:center;gap:16px;}
+  .topbar-logo{
+    width:34px;height:34px;background:var(--accent);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .topbar-logo svg{stroke:#fff;fill:none;}
+  .topbar-title{font-family:'Space Mono',monospace;font-size:0.95rem;font-weight:700;}
+  .topbar-user{
+    display:flex;align-items:center;gap:10px;
+    padding:6px 14px;border-radius:20px;
+    background:rgba(10,10,10,0.07);font-size:0.85rem;
+  }
+  .user-dot{width:8px;height:8px;border-radius:50%;background:var(--success);}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .nav-tabs{display:flex;align-items:center;gap:2px;margin-left:16px;}
+  .nav-tab{
+    padding:7px 14px;border-radius:5px;font-size:0.86rem;font-weight:500;
+    cursor:pointer;border:none;background:transparent;color:var(--text-muted);
+    transition:all 0.15s;
+  }
+  .nav-tab:hover{background:rgba(0,0,0,0.06);color:var(--text);}
+  .nav-tab.active{background:var(--accent);color:#fff;}
+  .main-content{flex:1;padding:28px;max-width:1400px;margin:0 auto;width:100%;}
+
+  /* ---- SECTIONS ---- */
+  .section{display:none;}
+  .section.active{display:block;}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  .section-title{font-family:'Space Mono',monospace;font-size:1.2rem;font-weight:700;}
+  .section-sub{font-size:0.85rem;color:var(--text-muted);margin-top:3px;}
+
+  /* ---- TODAY LOG ---- */
+  .date-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;margin-bottom:20px;
+  }
+  .date-display{font-family:'Space Mono',monospace;font-size:1.4rem;font-weight:700;}
+  .date-meta{font-size:0.82rem;color:var(--text-muted);margin-top:2px;}
+  .timeline{display:flex;flex-direction:column;gap:0;}
+  .step-card{
+    position:relative;padding:18px 22px;margin-bottom:2px;
+    border-radius:0;border-left:3px solid transparent;
+    transition:all 0.2s;
+  }
+  .step-card:first-child{border-radius:var(--radius) var(--radius) 0 0;}
+  .step-card:last-child{border-radius:0 0 var(--radius) var(--radius);}
+  .step-card.active-step{border-left-color:var(--success);}
+  .step-card.completed-step{border-left-color:var(--accent);}
+  .step-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+  .step-info{flex:1;}
+  .step-type{font-weight:600;font-size:0.95rem;display:flex;align-items:center;gap:8px;}
+  .step-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+  .badge{
+    display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
+    font-size:0.72rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;
+  }
+  .badge-op{background:var(--tag-op);color:#fff;}
+  .badge-fn{background:var(--tag-fn);color:#fff;}
+  .badge-un{background:var(--tag-un);color:#fff;}
+  .badge-active{background:rgba(26,122,74,0.12);color:var(--success);border:1px solid rgba(26,122,74,0.25);}
+  .badge-done{background:rgba(10,10,10,0.07);color:var(--text-muted);}
+  .step-time{font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--text-muted);}
+  .step-duration{font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;text-align:right;}
+  .step-duration span{display:block;font-size:0.72rem;font-weight:400;color:var(--text-muted);}
+  .step-actions{display:flex;gap:6px;align-items:center;}
+  .status-dot{width:9px;height:9px;border-radius:50%;background:var(--success);
+    animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+  /* ---- ADD STEP FORM ---- */
+  .add-step-panel{margin-bottom:20px;}
+  .add-step-toggle{
+    display:flex;align-items:center;gap:10px;padding:14px 22px;
+    cursor:pointer;border-radius:var(--radius);border:2px dashed var(--border-strong);
+    background:rgba(255,255,255,0.4);transition:all 0.2s;font-weight:500;
+    font-size:0.9rem;color:var(--text-muted);
+  }
+  .add-step-toggle:hover{background:rgba(255,255,255,0.7);border-color:var(--accent);color:var(--accent);}
+  .add-form{padding:22px;margin-top:2px;display:none;}
+  .add-form.open{display:block;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .form-full{grid-column:1/-1;}
+  .form-select{
+    width:100%;padding:10px 14px;
+    background:rgba(255,255,255,0.8);
+    border:1px solid var(--border-strong);
+    border-radius:6px;font-family:'DM Sans',sans-serif;
+    font-size:0.92rem;color:var(--text);outline:none;
+    cursor:pointer;transition:border-color 0.2s;
+  }
+  .form-select:focus{border-color:var(--accent);}
+  .form-textarea{
+    width:100%;padding:10px 14px;resize:vertical;min-height:72px;
+    background:rgba(255,255,255,0.8);
+    border:1px solid var(--border-strong);
+    border-radius:6px;font-family:'DM Sans',sans-serif;
+    font-size:0.92rem;color:var(--text);outline:none;
+  }
+  .form-textarea:focus{border-color:var(--accent);}
+
+  /* ---- STATS ---- */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .stat-card{padding:20px 22px;}
+  .stat-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;color:var(--text-muted);margin-bottom:8px;}
+  .stat-value{font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;line-height:1;}
+  .stat-sub{font-size:0.78rem;color:var(--text-muted);margin-top:5px;}
+
+  /* ---- ADMIN ---- */
+  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .admin-card{padding:24px;}
+  .admin-card-title{font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .list-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;border-radius:6px;border:1px solid var(--border);
+    background:rgba(255,255,255,0.5);margin-bottom:6px;font-size:0.88rem;
+  }
+  .list-item-info{display:flex;flex-direction:column;gap:2px;}
+  .list-item-name{font-weight:600;}
+  .list-item-sub{font-size:0.75rem;color:var(--text-muted);}
+  .inline-form{display:flex;gap:8px;margin-bottom:12px;}
+  .inline-form .form-control{flex:1;padding:9px 12px;font-size:0.88rem;}
+
+  /* ---- REPORTS ---- */
+  .report-filters{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;}
+  .report-filters .form-group{margin-bottom:0;min-width:160px;}
+  .log-table-wrap{overflow-x:auto;border-radius:var(--radius);}
+  .log-table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+  .log-table th{
+    padding:12px 16px;text-align:left;
+    font-family:'Space Mono',monospace;font-size:0.72rem;
+    font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    border-bottom:2px solid var(--border-strong);
+    background:rgba(10,10,10,0.04);color:var(--text-muted);
+  }
+  .log-table td{padding:12px 16px;border-bottom:1px solid var(--border);}
+  .log-table tr:hover td{background:rgba(10,10,10,0.03);}
+  .log-table tr:last-child td{border-bottom:none;}
+  .duration-pill{
+    display:inline-block;padding:3px 9px;border-radius:4px;
+    font-family:'Space Mono',monospace;font-size:0.78rem;font-weight:700;
+    background:rgba(10,10,10,0.07);
+  }
+
+  /* ---- TRAINERS MGMT ---- */
+  .trainers-table-wrap{overflow-x:auto;margin-top:16px;}
+  .trainers-table{width:100%;border-collapse:collapse;font-size:0.87rem;}
+  .trainers-table th,.trainers-table td{padding:11px 16px;text-align:left;border-bottom:1px solid var(--border);}
+  .trainers-table th{font-family:'Space Mono',monospace;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--text-muted);background:rgba(10,10,10,0.03);}
+  .trainers-table tr:hover td{background:rgba(10,10,10,0.02);}
+
+  /* ---- NOTIFICATIONS ---- */
+  .toast{
+    position:fixed;bottom:28px;right:28px;z-index:9999;
+    padding:14px 20px;border-radius:8px;font-size:0.88rem;font-weight:500;
+    display:flex;align-items:center;gap:10px;min-width:260px;
+    animation:slideUp 0.3s ease;
+    background:var(--accent);color:#fff;box-shadow:var(--shadow-lg);
+  }
+  .toast.success{background:var(--success);}
+  .toast.error{background:var(--danger);}
+  @keyframes slideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ---- EMPTY STATE ---- */
+  .empty-state{text-align:center;padding:52px 24px;color:var(--text-muted);}
+  .empty-state svg{opacity:0.25;margin-bottom:12px;}
+  .empty-state p{font-size:0.9rem;}
+
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);border-radius:10px;}
+
+  /* ---- MODAL ---- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.45);
+    backdrop-filter:blur(4px);z-index:1000;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{
+    background:var(--bg);border-radius:12px;padding:32px;
+    width:100%;max-width:520px;
+    box-shadow:var(--shadow-lg);
+    transform:translateY(20px);transition:transform 0.25s;
+  }
+  .modal-overlay.open .modal{transform:translateY(0);}
+  .modal-title{font-family:'Space Mono',monospace;font-size:1.05rem;font-weight:700;margin-bottom:6px;}
+  .modal-sub{font-size:0.85rem;color:var(--text-muted);margin-bottom:24px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+
+  @media(max-width:900px){
+    .stats-grid{grid-template-columns:1fr 1fr;}
+    .admin-grid{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr;}
+    .form-grid-3{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:600px){
+    .topbar{padding:0 16px;}
+    .main-content{padding:16px;}
+    .nav-tabs{display:none;}
+    .stats-grid{grid-template-columns:1fr 1fr;}
+    .form-grid-3{grid-template-columns:1fr;}
+  }
+
+  .chip{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:600;background:rgba(10,10,10,0.08);}
+  .region-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:700;background:var(--accent);color:#fff;}
+  .progress-bar-wrap{height:4px;background:rgba(10,10,10,0.08);border-radius:2px;margin-top:10px;overflow:hidden;}
+  .progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width 0.4s;}
+
+  .sep{height:1px;background:var(--border);margin:16px 0;}
+  
+  .mobile-nav{
+    display:none;position:fixed;bottom:0;left:0;right:0;
+    background:rgba(244,244,240,0.95);backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);z-index:100;
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .mobile-nav-inner{display:flex;justify-content:space-around;}
+  .mobile-nav-btn{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:6px 12px;border-radius:8px;background:none;border:none;
+    cursor:pointer;font-size:0.68rem;font-weight:600;color:var(--text-muted);
+    letter-spacing:0.04em;text-transform:uppercase;
+  }
+  .mobile-nav-btn.active{color:var(--accent);}
+  @media(max-width:600px){.mobile-nav{display:block;}.main-content{padding-bottom:88px;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen">
+  <div class="login-card glass">
+    <div class="login-logo">
+      <div class="login-logo-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2.2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="login-title">FCT TRACKER</div>
+        <div class="login-sub">Field Coach Utilization System</div>
+      </div>
+    </div>
+    <h2>Sign In</h2>
+    <p>Enter your credentials to access your workspace.</p>
+    <div class="login-error" id="login-error">Invalid username or password.</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input class="form-control" id="login-user" type="text" placeholder="Enter username" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input class="form-control" id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password"/>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" style="margin-top:8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Sign In
+    </button>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app-screen" style="display:none;flex-direction:column;min-height:100vh;">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="topbar-title">FCT TRACKER</div>
+      <nav class="nav-tabs" id="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('today')">Today</button>
+        <button class="nav-tab" onclick="showSection('history')">History</button>
+        <button class="nav-tab admin-only" onclick="showSection('admin')" style="display:none;">Admin</button>
+        <button class="nav-tab admin-only" onclick="showSection('trainers')" style="display:none;">Trainers</button>
+        <button class="nav-tab admin-only" onclick="showSection('reports')" style="display:none;">Reports</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-user">
+        <div class="user-dot"></div>
+        <span id="topbar-username">User</span>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- TODAY SECTION -->
+    <div class="section active" id="section-today">
+      <div class="date-header glass">
+        <div>
+          <div class="date-display" id="today-date-display">--</div>
+          <div class="date-meta" id="today-meta">Loading...</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'Space Mono',monospace;font-size:1.6rem;font-weight:700;" id="live-clock">--:--:--</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">Live Time</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="today-stats"></div>
+
+      <!-- ADD STEP -->
+      <div class="add-step-panel">
+        <div class="add-step-toggle" onclick="toggleAddForm()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Log New Activity Step
+        </div>
+        <div class="add-form glass" id="add-form">
+          <div class="form-grid-3">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Activity Type</label>
+              <select class="form-select" id="new-activity">
+                <option value="">-- Select --</option>
+                <option>Commute</option>
+                <option>Content Design</option>
+                <option>Store Visit</option>
+                <option>In-store Training</option>
+                <option>Virtual Training</option>
+                <option>Classroom Training</option>
+                <option>Meeting</option>
+                <option>Reports & Analysis</option>
+                <option>Admin Work</option>
+                <option>Break</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Requested By</label>
+              <select class="form-select" id="new-requester">
+                <option value="">-- Select --</option>
+                <option>Operation</option>
+                <option>Functional</option>
+                <option>University</option>
+                <option>Self-Initiated</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Store / Location</label>
+              <select class="form-select" id="new-store"></select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px;margin-bottom:0;">
+            <label>Notes (Optional)</label>
+            <textarea class="form-textarea" id="new-notes" placeholder="Brief description of this activity..."></textarea>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;align-items:center;">
+            <button class="btn btn-primary" onclick="startStep()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              Start Step
+            </button>
+            <button class="btn btn-outline" onclick="toggleAddForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMELINE -->
+      <div id="timeline-container">
+        <div id="timeline-empty" class="empty-state" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p>No steps logged today. Start your first activity above.</p>
+        </div>
+        <div class="timeline glass" id="timeline-list"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY SECTION -->
+    <div class="section" id="section-history">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Activity History</div>
+          <div class="section-sub">Review all your past logged sessions</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <input class="form-control" type="date" id="history-filter-date" style="width:170px;padding:8px 12px;font-size:0.88rem;" oninput="renderHistory()"/>
+          <select class="form-select" id="history-filter-type" style="width:170px;" onchange="renderHistory()">
+            <option value="">All Activities</option>
+            <option>Commute</option><option>Content Design</option><option>Store Visit</option>
+            <option>In-store Training</option><option>Virtual Training</option>
+            <option>Classroom Training</option><option>Meeting</option>
+            <option>Reports & Analysis</option><option>Admin Work</option><option>Break</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="log-table-wrap glass">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Activity</th><th>Requester</th><th>Store/Location</th>
+              <th>Start</th><th>End</th><th>Duration</th><th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN SECTION -->
+    <div class="section" id="section-admin">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Admin Panel</div>
+          <div class="section-sub">Manage stores, regions, and system settings</div>
+        </div>
+      </div>
+      <div class="admin-grid">
+        <!-- Regions -->
+        <div class="admin-card glass">
+          <div class="admin-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Regions
+          </div>
+          <div class="inline-form">
+            <input class="form-control" id="new-region-input" placeholder="Region name..." type="text"/>
+            <button class="btn btn-primary btn-sm" onclick="addRegion()">Add</button>
+          </div>
+          <div id="regions-list"></div>
+        </div>
+        <!-- Stores -->
+        <div class="admin-card glass">
+          <div class="admin-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v5H3z"/><path d="M5 8v13h14V8"/><path d="M10 12h4"/></svg>
+            Stores / Locations
+          </div>
+          <div class="inline-form">
+            <input class="form-control" id="new-store-input" placeholder="Store name..." type="text" style="flex:2;"/>
+            <select class="form-select" id="new-store-region" style="flex:1;padding:9px 10px;font-size:0.86rem;"></select>
+            <button class="btn btn-primary btn-sm" onclick="addStore()">Add</button>
+          </div>
+          <div id="stores-list"></div>
+        </div>
+        <!-- Activity Types -->
+        <div class="admin-card glass">
+          <div class="admin-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Activity Types
+          </div>
+          <div class="inline-form">
+            <input class="form-control" id="new-acttype-input" placeholder="Activity type..." type="text"/>
+            <button class="btn btn-primary btn-sm" onclick="addActivityType()">Add</button>
+          </div>
+          <div id="acttypes-list"></div>
+        </div>
+        <!-- Summary Stats -->
+        <div class="admin-card glass">
+          <div class="admin-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            System Summary
+          </div>
+          <div id="admin-summary"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRAINERS SECTION -->
+    <div class="section" id="section-trainers">
+      <div class="section-header">
+        <div>
+          <div class="section-title">FCT Management</div>
+          <div class="section-sub">Add, remove and manage Field Coach Trainers</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddTrainerModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add FCT
+        </button>
+      </div>
+      <div class="glass" style="overflow:hidden;">
+        <div class="trainers-table-wrap">
+          <table class="trainers-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Username</th><th>Region</th><th>Store(s)</th><th>Role</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="trainers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS SECTION -->
+    <div class="section" id="section-reports">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Reports & Analysis</div>
+          <div class="section-sub">Aggregate utilization across all FCTs</div>
+        </div>
+        <button class="btn btn-outline" onclick="exportReport()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="stats-grid" id="report-stats"></div>
+      <div class="report-filters">
+        <div class="form-group">
+          <label>From Date</label>
+          <input class="form-control" type="date" id="rpt-from" oninput="renderReports()"/>
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input class="form-control" type="date" id="rpt-to" oninput="renderReports()"/>
+        </div>
+        <div class="form-group">
+          <label>Trainer</label>
+          <select class="form-select" id="rpt-trainer" onchange="renderReports()"><option value="">All Trainers</option></select>
+        </div>
+        <div class="form-group">
+          <label>Requester</label>
+          <select class="form-select" id="rpt-requester" onchange="renderReports()">
+            <option value="">All</option>
+            <option>Operation</option><option>Functional</option><option>University</option><option>Self-Initiated</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="renderReports()" style="margin-bottom:0;align-self:flex-end;">Apply</button>
+      </div>
+      <div class="log-table-wrap glass">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Trainer</th><th>Date</th><th>Activity</th><th>Requester</th>
+              <th>Store</th><th>Start</th><th>End</th><th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- main-content -->
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mobile-nav-btn active" onclick="showSection('today')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Today
+      </button>
+      <button class="mobile-nav-btn" onclick="showSection('history')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </button>
+      <button class="mobile-nav-btn admin-mobile-only" onclick="showSection('admin')" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        Admin
+      </button>
+      <button class="mobile-nav-btn admin-mobile-only" onclick="showSection('reports')" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Reports
+      </button>
+    </div>
+  </div>
+</div><!-- app-screen -->
+
+<!-- ============ ADD TRAINER MODAL ============ -->
+<div class="modal-overlay" id="add-trainer-modal">
+  <div class="modal">
+    <div class="modal-title">Add New FCT</div>
+    <div class="modal-sub">Create login credentials for a Field Coach Trainer</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input class="form-control" id="t-name" type="text" placeholder="Full name"/>
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input class="form-control" id="t-user" type="text" placeholder="login username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input class="form-control" id="t-pass" type="password" placeholder="Set password"/>
+      </div>
+      <div class="form-group">
+        <label>Region</label>
+        <select class="form-select" id="t-region"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Primary Store</label>
+      <select class="form-select" id="t-store"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('add-trainer-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTrainer()">Save FCT</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast" style="display:none;"></div>
+
+<script>
+// ============================================================
+//  DATA STORE
+// ============================================================
+const DB = {
+  get(k){ try{ return JSON.parse(localStorage.getItem('fct_'+k))||null; }catch(e){return null;} },
+  set(k,v){ localStorage.setItem('fct_'+k, JSON.stringify(v)); },
+};
+
+// DEFAULT DATA INIT
+function initData(){
+  if(!DB.get('regions')) DB.set('regions',['Riyadh','Jeddah','Dammam','Makkah','Madinah','Taif','Abha','Tabuk']);
+  if(!DB.get('stores')) DB.set('stores',[
+    {name:'Riyadh Park Mall',region:'Riyadh'},{name:'Al Nakheel Mall',region:'Riyadh'},
+    {name:'Red Sea Mall',region:'Jeddah'},{name:'Mall of Arabia Jeddah',region:'Jeddah'},
+    {name:'Dhahran Mall',region:'Dammam'},{name:'Al Rashid Mall',region:'Dammam'},
+    {name:'Makkah Mall',region:'Makkah'},{name:'Virtual / Remote',region:'All'},
+    {name:'HQ - Office',region:'All'}
+  ]);
+  if(!DB.get('activityTypes')) DB.set('activityTypes',[
+    'Commute','Content Design','Store Visit','In-store Training',
+    'Virtual Training','Classroom Training','Meeting','Reports & Analysis',
+    'Admin Work','Break','Other'
+  ]);
+  if(!DB.get('users')) DB.set('users',[
+    {name:'Admin',username:'admin',password:'admin123',role:'admin'},
+    {name:'Super Admin',username:'superadmin',password:'hidden@2026',role:'superadmin'},
+    {name:'Ahmed Al-Rashidi',username:'ahmed.rsh',password:'fct2026',role:'trainer',region:'Riyadh',store:'Riyadh Park Mall'},
+    {name:'Fatima Al-Zahrani',username:'fatima.zh',password:'fct2026',role:'trainer',region:'Jeddah',store:'Red Sea Mall'},
+    {name:'Khalid Al-Otaibi',username:'khalid.ot',password:'fct2026',role:'trainer',region:'Dammam',store:'Dhahran Mall'},
+  ]);
+  if(!DB.get('logs')) DB.set('logs',[]);
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+let currentUser = null;
+let clockInterval = null;
+let activeStepInterval = null;
+
+// ============================================================
+//  LOGIN
+// ============================================================
+function doLogin(){
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const users = DB.get('users')||[];
+  const user = users.find(x=>x.username===u && x.password===p);
+  if(!user){ 
+    document.getElementById('login-error').style.display='block'; 
+    return; 
+  }
+  document.getElementById('login-error').style.display='none';
+  currentUser = user;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='flex';
+  document.getElementById('topbar-username').textContent=user.name;
+  setupRoleUI();
+  initApp();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin();
+});
+
+function doLogout(){
+  currentUser=null;
+  stopClock();
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+function setupRoleUI(){
+  const isAdmin = currentUser.role==='admin'||currentUser.role==='superadmin';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
+  document.querySelectorAll('.admin-mobile-only').forEach(el=>el.style.display=isAdmin?'':'none');
+}
+
+// ============================================================
+//  APP INIT
+// ============================================================
+function initApp(){
+  startClock();
+  populateStoreDropdown();
+  renderTodayStats();
+  renderTimeline();
+  renderHistory();
+  if(currentUser.role==='admin'||currentUser.role==='superadmin'){
+    renderAdminLists();
+    renderTrainers();
+    renderReports();
+    populateReportFilters();
+  }
+}
+
+// ============================================================
+//  CLOCK
+// ============================================================
+function startClock(){
+  stopClock();
+  updateClock();
+  clockInterval=setInterval(()=>{
+    updateClock();
+    updateActiveStepDurations();
+  },1000);
+}
+function stopClock(){ if(clockInterval){clearInterval(clockInterval);clockInterval=null;} }
+function updateClock(){
+  const now=new Date();
+  document.getElementById('live-clock').textContent=now.toLocaleTimeString('en-GB');
+  document.getElementById('today-date-display').textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('today-meta').textContent='Week '+getWeekNum(now)+' | '+now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+}
+
+function getWeekNum(d){
+  const s=new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);
+}
+
+function updateActiveStepDurations(){
+  const now=Date.now();
+  document.querySelectorAll('.active-timer').forEach(el=>{
+    const start=parseInt(el.dataset.start);
+    if(start){ el.textContent=formatDuration(now-start); }
+  });
+}
+
+// ============================================================
+//  STEP MANAGEMENT
+// ============================================================
+function toggleAddForm(){
+  const f=document.getElementById('add-form');
+  f.classList.toggle('open');
+}
+
+function getTodayLogs(){
+  const all=DB.get('logs')||[];
+  const today=new Date().toISOString().split('T')[0];
+  return all.filter(l=>l.username===currentUser.username && l.date===today);
+}
+
+function getAllMyLogs(){
+  const all=DB.get('logs')||[];
+  return all.filter(l=>l.username===currentUser.username);
+}
+
+function startStep(){
+  const act=document.getElementById('new-activity').value;
+  const req=document.getElementById('new-requester').value;
+  const store=document.getElementById('new-store').value;
+  const notes=document.getElementById('new-notes').value.trim();
+  if(!act){showToast('Select an activity type','error');return;}
+  if(!req){showToast('Select who requested this task','error');return;}
+
+  // Auto-end any active step
+  const logs=DB.get('logs')||[];
+  logs.forEach(l=>{
+    if(l.username===currentUser.username && !l.endTime){
+      l.endTime=new Date().toISOString();
+      l.duration=Date.parse(l.endTime)-Date.parse(l.startTime);
+    }
+  });
+
+  const step={
+    id:'step_'+Date.now(),
+    username:currentUser.username,
+    trainerName:currentUser.name,
+    region:currentUser.region||'',
+    date:new Date().toISOString().split('T')[0],
+    activity:act,
+    requester:req,
+    store:store||'N/A',
+    notes:notes,
+    startTime:new Date().toISOString(),
+    endTime:null,
+    duration:null,
+  };
+  logs.push(step);
+  DB.set('logs',logs);
+  document.getElementById('add-form').classList.remove('open');
+  document.getElementById('new-activity').value='';
+  document.getElementById('new-requester').value='';
+  document.getElementById('new-notes').value='';
+  renderTimeline();
+  renderTodayStats();
+  showToast('Step started: '+act,'success');
+}
+
+function endStep(id){
+  const logs=DB.get('logs')||[];
+  const l=logs.find(x=>x.id===id);
+  if(!l)return;
+  l.endTime=new Date().toISOString();
+  l.duration=Date.parse(l.endTime)-Date.parse(l.startTime);
+  DB.set('logs',logs);
+  renderTimeline();
+  renderTodayStats();
+  showToast('Step ended. Duration: '+formatDuration(l.duration),'success');
+}
+
+function deleteStep(id){
+  if(!confirm('Delete this step?'))return;
+  const logs=DB.get('logs')||[];
+  DB.set('logs',logs.filter(x=>x.id!==id));
+  renderTimeline();
+  renderTodayStats();
+  showToast('Step removed');
+}
+
+// ============================================================
+//  RENDER TIMELINE
+// ============================================================
+function renderTimeline(){
+  const logs=getTodayLogs();
+  const list=document.getElementById('timeline-list');
+  const empty=document.getElementById('timeline-empty');
+  if(logs.length===0){
+    list.innerHTML='';list.style.display='none';
+    empty.style.display='block';return;
+  }
+  list.style.display='block';empty.style.display='none';
+  list.innerHTML=logs.slice().reverse().map(l=>{
+    const isActive=!l.endTime;
+    const dur=isActive?null:l.duration;
+    const reqClass={'Operation':'badge-op','Functional':'badge-fn','University':'badge-un','Self-Initiated':'badge-done'}[l.requester]||'badge-done';
+    return `
+    <div class="step-card ${isActive?'active-step':'completed-step'}" id="card-${l.id}">
+      <div class="step-row">
+        <div class="step-info">
+          <div class="step-type">
+            ${isActive?`<div class="status-dot"></div>`:''}
+            ${escHtml(l.activity)}
+          </div>
+          <div class="step-meta">
+            <span class="badge ${reqClass}">${escHtml(l.requester)}</span>
+            ${l.store&&l.store!=='N/A'?`<span class="chip">${escHtml(l.store)}</span>`:''}
+            ${l.region?`<span class="region-badge">${escHtml(l.region)}</span>`:''}
+            ${l.notes?`<span style="font-size:0.8rem;color:var(--text-muted);">${escHtml(l.notes)}</span>`:''}
+          </div>
+          <div class="step-time" style="margin-top:6px;">
+            Start: ${formatTime(l.startTime)}
+            ${l.endTime?` &nbsp;|&nbsp; End: ${formatTime(l.endTime)}`:'&nbsp;|&nbsp; Ongoing...'}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <div class="step-duration">
+            ${isActive
+              ? `<span class="active-timer" data-start="${Date.parse(l.startTime)}">${formatDuration(Date.now()-Date.parse(l.startTime))}</span><span>Elapsed</span>`
+              : `${formatDuration(dur)}<span>Duration</span>`}
+          </div>
+          <div class="step-actions">
+            ${isActive?`<button class="btn btn-success btn-sm" onclick="endStep('${l.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              End
+            </button>`:''}
+            <button class="btn btn-outline btn-sm" onclick="deleteStep('${l.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+//  TODAY STATS
+// ============================================================
+function renderTodayStats(){
+  const logs=getTodayLogs();
+  const completed=logs.filter(l=>l.duration);
+  const totalMs=completed.reduce((a,l)=>a+l.duration,0);
+  const activeStep=logs.find(l=>!l.endTime);
+  const byType={};
+  completed.forEach(l=>{byType[l.activity]=(byType[l.activity]||0)+l.duration;});
+  const topType=Object.entries(byType).sort((a,b)=>b[1]-a[1])[0];
+  const pct=totalMs>0?(totalMs/(8*3600000)*100).toFixed(0):0;
+
+  document.getElementById('today-stats').innerHTML=`
+    <div class="stat-card glass">
+      <div class="stat-label">Total Steps</div>
+      <div class="stat-value">${logs.length}</div>
+      <div class="stat-sub">${completed.length} completed</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Time Logged</div>
+      <div class="stat-value">${formatDurationShort(totalMs)}</div>
+      <div class="stat-sub">of 8h target</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${Math.min(pct,100)}%"></div></div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Active Now</div>
+      <div class="stat-value">${activeStep?activeStep.activity.split(' ')[0]:'--'}</div>
+      <div class="stat-sub">${activeStep?'Running...':'No active step'}</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Top Activity</div>
+      <div class="stat-value" style="font-size:1rem;line-height:1.3;">${topType?topType[0]:'--'}</div>
+      <div class="stat-sub">${topType?formatDurationShort(topType[1]):''}</div>
+    </div>
+  `;
+}
+
+// ============================================================
+//  HISTORY
+// ============================================================
+function renderHistory(){
+  const filterDate=document.getElementById('history-filter-date').value;
+  const filterType=document.getElementById('history-filter-type').value;
+  let logs=getAllMyLogs().filter(l=>l.endTime);
+  if(filterDate) logs=logs.filter(l=>l.date===filterDate);
+  if(filterType) logs=logs.filter(l=>l.activity===filterType);
+  logs.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  const tbody=document.getElementById('history-tbody');
+  if(!logs.length){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">No records found.</td></tr>`;
+    return;
+  }
+  const reqClass={'Operation':'badge-op','Functional':'badge-fn','University':'badge-un','Self-Initiated':'badge-done'};
+  tbody.innerHTML=logs.map(l=>`
+    <tr>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${l.date}</td>
+      <td><strong>${escHtml(l.activity)}</strong></td>
+      <td><span class="badge ${reqClass[l.requester]||'badge-done'}">${escHtml(l.requester||'--')}</span></td>
+      <td>${escHtml(l.store||'--')}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${formatTime(l.startTime)}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${formatTime(l.endTime)}</td>
+      <td><span class="duration-pill">${formatDuration(l.duration)}</span></td>
+      <td style="font-size:0.82rem;color:var(--text-muted);">${escHtml(l.notes||'--')}</td>
+    </tr>`).join('');
+}
+
+// ============================================================
+//  ADMIN
+// ============================================================
+function renderAdminLists(){
+  renderRegionsList();
+  renderStoresList();
+  renderActTypesList();
+  renderAdminSummary();
+  populateStoreRegionDropdowns();
+}
+
+function renderRegionsList(){
+  const r=DB.get('regions')||[];
+  document.getElementById('regions-list').innerHTML=r.map((x,i)=>`
+    <div class="list-item">
+      <div class="list-item-info"><div class="list-item-name">${escHtml(x)}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="removeRegion(${i})">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('')||'<div style="color:var(--text-muted);font-size:0.85rem;">No regions added.</div>';
+}
+
+function addRegion(){
+  const v=document.getElementById('new-region-input').value.trim();
+  if(!v)return;
+  const r=DB.get('regions')||[];
+  r.push(v);DB.set('regions',r);
+  document.getElementById('new-region-input').value='';
+  renderAdminLists();populateStoreDropdown();
+  showToast('Region added');
+}
+function removeRegion(i){
+  const r=DB.get('regions')||[];r.splice(i,1);DB.set('regions',r);
+  renderAdminLists();populateStoreDropdown();
+  showToast('Region removed');
+}
+
+function renderStoresList(){
+  const s=DB.get('stores')||[];
+  document.getElementById('stores-list').innerHTML=s.map((x,i)=>`
+    <div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-name">${escHtml(x.name)}</div>
+        <div class="list-item-sub">${escHtml(x.region)}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeStore(${i})">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('')||'<div style="color:var(--text-muted);font-size:0.85rem;">No stores added.</div>';
+}
+
+function addStore(){
+  const n=document.getElementById('new-store-input').value.trim();
+  const r=document.getElementById('new-store-region').value;
+  if(!n||!r){showToast('Enter store name and region','error');return;}
+  const s=DB.get('stores')||[];
+  s.push({name:n,region:r});DB.set('stores',s);
+  document.getElementById('new-store-input').value='';
+  renderAdminLists();populateStoreDropdown();
+  showToast('Store added');
+}
+function removeStore(i){
+  const s=DB.get('stores')||[];s.splice(i,1);DB.set('stores',s);
+  renderAdminLists();populateStoreDropdown();
+  showToast('Store removed');
+}
+
+function renderActTypesList(){
+  const a=DB.get('activityTypes')||[];
+  document.getElementById('acttypes-list').innerHTML=a.map((x,i)=>`
+    <div class="list-item">
+      <div class="list-item-name">${escHtml(x)}</div>
+      <button class="btn btn-danger btn-sm" onclick="removeActivityType(${i})">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('')||'<div style="color:var(--text-muted);font-size:0.85rem;">No types.</div>';
+  // Update select
+  const sel=document.getElementById('new-activity');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- Select --</option>'+a.map(x=>`<option${x===cur?' selected':''}>${escHtml(x)}</option>`).join('');
+}
+
+function addActivityType(){
+  const v=document.getElementById('new-acttype-input').value.trim();
+  if(!v)return;
+  const a=DB.get('activityTypes')||[];a.push(v);DB.set('activityTypes',a);
+  document.getElementById('new-acttype-input').value='';
+  renderActTypesList();showToast('Activity type added');
+}
+function removeActivityType(i){
+  const a=DB.get('activityTypes')||[];a.splice(i,1);DB.set('activityTypes',a);
+  renderActTypesList();showToast('Activity type removed');
+}
+
+function renderAdminSummary(){
+  const logs=DB.get('logs')||[];
+  const users=DB.get('users')||[];
+  const trainers=users.filter(u=>u.role==='trainer').length;
+  const completed=logs.filter(l=>l.endTime);
+  const totalMs=completed.reduce((a,l)=>a+l.duration,0);
+  const stores=(DB.get('stores')||[]).length;
+  document.getElementById('admin-summary').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="list-item"><span>Total Trainers</span><strong style="font-family:'Space Mono',monospace;">${trainers}</strong></div>
+      <div class="list-item"><span>Total Log Entries</span><strong style="font-family:'Space Mono',monospace;">${logs.length}</strong></div>
+      <div class="list-item"><span>Total Hours Tracked</span><strong style="font-family:'Space Mono',monospace;">${formatDurationShort(totalMs)}</strong></div>
+      <div class="list-item"><span>Active Stores</span><strong style="font-family:'Space Mono',monospace;">${stores}</strong></div>
+    </div>
+  `;
+}
+
+function populateStoreRegionDropdowns(){
+  const regions=DB.get('regions')||[];
+  const sel=document.getElementById('new-store-region');
+  sel.innerHTML=regions.map(r=>`<option>${escHtml(r)}</option>`).join('');
+  // Trainer modal
+  const tsel=document.getElementById('t-region');
+  tsel.innerHTML=regions.map(r=>`<option>${escHtml(r)}</option>`).join('');
+  populateTrainerStoreDropdown();
+}
+
+function populateTrainerStoreDropdown(){
+  const stores=DB.get('stores')||[];
+  const sel=document.getElementById('t-store');
+  sel.innerHTML=stores.map(s=>`<option value="${escHtml(s.name)}">${escHtml(s.name)} (${escHtml(s.region)})</option>`).join('');
+}
+
+// ============================================================
+//  TRAINERS
+// ============================================================
+function renderTrainers(){
+  const users=DB.get('users')||[];
+  const trainers=users.filter(u=>u.role==='trainer'||u.role==='admin');
+  const tbody=document.getElementById('trainers-tbody');
+  tbody.innerHTML=trainers.map((u,i)=>`
+    <tr>
+      <td><strong>${escHtml(u.name)}</strong></td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.82rem;">${escHtml(u.username)}</td>
+      <td>${u.region?`<span class="region-badge">${escHtml(u.region)}</span>`:'--'}</td>
+      <td>${u.store?escHtml(u.store):'--'}</td>
+      <td><span class="chip">${escHtml(u.role)}</span></td>
+      <td>
+        ${u.role!=='admin'&&u.role!=='superadmin'?`
+        <button class="btn btn-danger btn-sm" onclick="removeTrainer('${escHtml(u.username)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Remove
+        </button>`:'<span style="color:var(--text-muted);font-size:0.8rem;">Protected</span>'}
+      </td>
+    </tr>`).join('');
+}
+
+function openAddTrainerModal(){
+  populateStoreRegionDropdowns();
+  openModal('add-trainer-modal');
+}
+
+function saveTrainer(){
+  const name=document.getElementById('t-name').value.trim();
+  const user=document.getElementById('t-user').value.trim();
+  const pass=document.getElementById('t-pass').value.trim();
+  const region=document.getElementById('t-region').value;
+  const store=document.getElementById('t-store').value;
+  if(!name||!user||!pass){showToast('Fill all required fields','error');return;}
+  const users=DB.get('users')||[];
+  if(users.find(u=>u.username===user)){showToast('Username already exists','error');return;}
+  users.push({name,username:user,password:pass,role:'trainer',region,store});
+  DB.set('users',users);
+  closeModal('add-trainer-modal');
+  renderTrainers();
+  renderAdminSummary();
+  showToast('FCT added: '+name,'success');
+  ['t-name','t-user','t-pass'].forEach(id=>document.getElementById(id).value='');
+}
+
+function removeTrainer(username){
+  if(!confirm('Remove this trainer? Their logs will be kept.'))return;
+  const users=DB.get('users')||[];
+  DB.set('users',users.filter(u=>u.username!==username));
+  renderTrainers();renderAdminSummary();
+  showToast('Trainer removed');
+}
+
+// ============================================================
+//  REPORTS
+// ============================================================
+function populateReportFilters(){
+  const users=DB.get('users')||[];
+  const trainers=users.filter(u=>u.role==='trainer');
+  const sel=document.getElementById('rpt-trainer');
+  sel.innerHTML='<option value="">All Trainers</option>'+trainers.map(u=>`<option value="${escHtml(u.username)}">${escHtml(u.name)}</option>`).join('');
+}
+
+function renderReports(){
+  const from=document.getElementById('rpt-from').value;
+  const to=document.getElementById('rpt-to').value;
+  const trainer=document.getElementById('rpt-trainer').value;
+  const requester=document.getElementById('rpt-requester').value;
+  let logs=(DB.get('logs')||[]).filter(l=>l.endTime);
+  if(from) logs=logs.filter(l=>l.date>=from);
+  if(to) logs=logs.filter(l=>l.date<=to);
+  if(trainer) logs=logs.filter(l=>l.username===trainer);
+  if(requester) logs=logs.filter(l=>l.requester===requester);
+  logs.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+
+  const totalMs=logs.reduce((a,l)=>a+l.duration,0);
+  const users=DB.get('users')||[];
+  const uniqueTrainers=new Set(logs.map(l=>l.username)).size;
+  const byReq={};logs.forEach(l=>{byReq[l.requester]=(byReq[l.requester]||0)+1;});
+  const topReq=Object.entries(byReq).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('report-stats').innerHTML=`
+    <div class="stat-card glass">
+      <div class="stat-label">Total Entries</div>
+      <div class="stat-value">${logs.length}</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Total Hours</div>
+      <div class="stat-value">${formatDurationShort(totalMs)}</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Trainers</div>
+      <div class="stat-value">${uniqueTrainers}</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Top Requester</div>
+      <div class="stat-value" style="font-size:1rem;">${topReq?topReq[0]:'--'}</div>
+      <div class="stat-sub">${topReq?topReq[1]+' tasks':''}</div>
+    </div>
+  `;
+
+  const reqClass={'Operation':'badge-op','Functional':'badge-fn','University':'badge-un','Self-Initiated':'badge-done'};
+  const tbody=document.getElementById('report-tbody');
+  if(!logs.length){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">No records match your filters.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=logs.map(l=>`
+    <tr>
+      <td><strong>${escHtml(l.trainerName||l.username)}</strong></td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${l.date}</td>
+      <td>${escHtml(l.activity)}</td>
+      <td><span class="badge ${reqClass[l.requester]||'badge-done'}">${escHtml(l.requester||'--')}</span></td>
+      <td>${escHtml(l.store||'--')}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${formatTime(l.startTime)}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${formatTime(l.endTime)}</td>
+      <td><span class="duration-pill">${formatDuration(l.duration)}</span></td>
+    </tr>`).join('');
+}
+
+function exportReport(){
+  const logs=(DB.get('logs')||[]).filter(l=>l.endTime);
+  const rows=[['Trainer','Username','Date','Activity','Requester','Store','Region','Start','End','Duration (min)','Notes']];
+  logs.forEach(l=>{
+    rows.push([
+      l.trainerName||'',l.username||'',l.date||'',l.activity||'',
+      l.requester||'',l.store||'',l.region||'',
+      formatTime(l.startTime),formatTime(l.endTime),
+      (l.duration/60000).toFixed(1),
+      (l.notes||'').replace(/,/g,';')
+    ]);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+(v||'')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='fct_report_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  showToast('Report exported','success');
+}
+
+// ============================================================
+//  POPULATE STORE DROPDOWN (on form)
+// ============================================================
+function populateStoreDropdown(){
+  const stores=DB.get('stores')||[];
+  const sel=document.getElementById('new-store');
+  sel.innerHTML='<option value="">-- Select Store --</option>'+stores.map(s=>`<option value="${escHtml(s.name)}">${escHtml(s.name)} (${escHtml(s.region)})</option>`).join('');
+}
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
+function showSection(name){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    t.classList.toggle('active',t.textContent.toLowerCase().includes(name)||
+    (name==='today'&&t.textContent.toLowerCase()==='today'));
+  });
+  document.querySelectorAll('.mobile-nav-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent.trim().toLowerCase().includes(name));
+  });
+  if(name==='history') renderHistory();
+  if(name==='admin'){renderAdminLists();}
+  if(name==='trainers') renderTrainers();
+  if(name==='reports'){renderReports();populateReportFilters();}
+}
+
+// ============================================================
+//  MODAL
+// ============================================================
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
+
+// ============================================================
+//  TOAST
+// ============================================================
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(type?' '+type:'');
+  t.style.display='flex';
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.style.display='none';},3200);
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function formatTime(iso){
+  if(!iso)return '--';
+  return new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function formatDuration(ms){
+  if(!ms&&ms!==0)return '--';
+  const s=Math.floor(ms/1000);
+  const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);const ss=s%60;
+  if(h>0)return `${h}h ${String(m).padStart(2,'0')}m ${String(ss).padStart(2,'0')}s`;
+  return `${String(m).padStart(2,'0')}m ${String(ss).padStart(2,'0')}s`;
+}
+function formatDurationShort(ms){
+  if(!ms||ms<=0)return '0h 00m';
+  const h=Math.floor(ms/3600000);
+  const m=Math.floor((ms%3600000)/60000);
+  return `${h}h ${String(m).padStart(2,'0')}m`;
+}
+function escHtml(s){
+  if(!s)return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+//  BOOT
+// ============================================================
+initData();
+</script>
+</body>
+</html>
